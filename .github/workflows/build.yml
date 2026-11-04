@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,7 +27,20 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
+      - name: APK umbenennen
+        run: cp app/build/outputs/apk/release/app-release.apk AdBlockBrowser-32bit.apk
+
       - uses: actions/upload-artifact@v4
         with:
           name: AdBlockBrowser-32bit
-          path: app/build/outputs/apk/release/*.apk
+          path: AdBlockBrowser-32bit.apk
+
+      # Fertige APK als Release veröffentlichen (direkt am Handy herunterladbar)
+      - uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: AdBlock Browser Build ${{ github.run_number }}
+          body: 32-bit APK (armeabi-v7a). Created by DeLorean23
+          files: AdBlockBrowser-32bit.apk
+          make_latest: true
