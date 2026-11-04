@@ -15,7 +15,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # Android-SDK ist auf ubuntu-latest vorinstalliert
+      - name: SDK-Lizenzen bestätigen
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: APK bauen (32-bit, armeabi-v7a)
         run: |
