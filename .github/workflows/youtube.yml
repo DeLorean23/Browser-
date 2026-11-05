@@ -1,0 +1,66 @@
+name: YouTube-App bauen
+
+on:
+  push:
+    paths:
+      - 'youtube/**'
+      - 'settings.gradle'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/youtube.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: SDK-Lizenzen bestätigen
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: APK bauen (32-bit, armeabi-v7a)
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew :youtube:assembleRelease --no-daemon --stacktrace 2>&1 | tee build-log.txt
+
+      - name: APK umbenennen
+        run: cp youtube/build/outputs/apk/release/youtube-release.apk DeLoreanTube-32bit.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeLoreanTube-32bit
+          path: DeLoreanTube-32bit.apk
+
+      - uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: tube-build-${{ github.run_number }}
+          name: DeLorean Tube Build ${{ github.run_number }}
+          body: 32-bit APK (armeabi-v7a) der YouTube-App mit Google-Login, Downloads (MP3/MP4), ohne Werbung und mit Hintergrund-Wiedergabe. Created by DeLorean23
+          files: DeLoreanTube-32bit.apk
+          make_latest: false
+
+      # Bei Fehlern das Build-Protokoll in den Zweig "build-logs" legen (zum Nachsehen)
+      - name: Fehlerprotokoll speichern
+        if: failure()
+        run: |
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          tail -c 60000 build-log.txt > /tmp/log.txt || echo "kein Log" > /tmp/log.txt
+          git fetch origin build-logs || true
+          git checkout -B build-logs
+          git rm -rq --cached . || true
+          cp /tmp/log.txt youtube-build-log.txt
+          git add -f youtube-build-log.txt
+          git commit -m "Build-Log ${{ github.run_number }}"
+          git push -f origin build-logs

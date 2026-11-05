@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eigenes Icon: roter Play-Knopf mit DeLorean-Blitzstreifen -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FF0F0F0F"
+        android:pathData="M8,2h32a6,6 0,0 1,6 6v32a6,6 0,0 1,-6 6H8a6,6 0,0 1,-6 -6V8a6,6 0,0 1,6 -6z" />
+    <path android:fillColor="#FFFF3B30"
+        android:pathData="M12,12h24a5,5 0,0 1,5 5v14a5,5 0,0 1,-5 5H12a5,5 0,0 1,-5 -5V17a5,5 0,0 1,5 -5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M20,17.5L30,24L20,30.5Z" />
+    <path android:fillColor="#FF19C2A0" android:pathData="M7,39h34v2H7z" />
+</vector>

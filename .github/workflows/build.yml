@@ -2,6 +2,9 @@ name: APK bauen
 
 on:
   push:
+    paths-ignore:
+      - 'youtube/**'
+      - '.github/workflows/youtube.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,7 +28,7 @@ jobs:
       - name: APK bauen (32-bit, armeabi-v7a)
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew :app:assembleRelease --no-daemon
 
       - name: APK umbenennen
         run: cp app/build/outputs/apk/release/app-release.apk AdBlockBrowser-32bit.apk

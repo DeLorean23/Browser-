@@ -40,3 +40,12 @@ bestimmten Headern annehmen, geht das nicht – dann im Menü „Bildschirm spie
 ## Anpassen
 - App-Name: `app/src/main/res/values/strings.xml`
 - Eigene Werbe-Domains: `app/src/main/assets/adhosts.txt` (eine pro Zeile)
+
+---
+
+# DeLorean Tube (YouTube-App)
+
+Im Ordner [`youtube/`](youtube/README.md) liegt eine zweite App: YouTube mit Google-Login,
+Downloads (MP3 oder MP4 mit Auflösungsauswahl), ohne Werbung und mit Hintergrund-Wiedergabe.
+Sie wird vom Workflow **YouTube-App bauen** als `DeLoreanTube-32bit.apk` unter **Releases** veröffentlicht.
+Einrichtung des Google-Logins: siehe [`youtube/README.md`](youtube/README.md).
