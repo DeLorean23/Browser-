@@ -465,7 +465,7 @@ public class ShortsActivity extends AppCompatActivity {
             String th = it.thumb;
             String id = Util.videoId(it.url);
             if (id != null) th = "https://i.ytimg.com/vi/" + id + "/oar2.jpg"; // hochkant-Vorschau
-            final String fallback = it.thumb;
+            final String fallback = id != null ? "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" : it.thumb;
             Glide.with(ShortsActivity.this).load(th)
                     .error(Glide.with(ShortsActivity.this).load(fallback))
                     .into(thumb);
