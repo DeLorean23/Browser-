@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">AdBlock Browser</string>
-    <string name="url_hint">Adresse oder Suche eingeben</string>
-    <string name="start_title">AdBlock Browser</string>
-    <string name="start_text">Oben eine Adresse eingeben.\nWerbung und Popups werden blockiert.\nCast-Symbol oben erscheint, sobald ein Chromecast im WLAN ist.</string>
-    <string name="credit">Created by DeLorean23</string>
-</resources>
