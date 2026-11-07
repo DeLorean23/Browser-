@@ -212,7 +212,7 @@ public class PlayerActivity extends AppCompatActivity {
         controllerFuture.addListener(() -> {
             try {
                 controller = controllerFuture.get();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 Toast.makeText(this, "Player nicht verfügbar: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 return;
             }
@@ -355,7 +355,7 @@ public class PlayerActivity extends AppCompatActivity {
                     if (!u.equals(url) || isFinishing()) return;
                     showInfo(si);
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> {
                     if (!u.equals(url)) return;
                     loading.setVisibility(View.GONE);
@@ -475,7 +475,7 @@ public class PlayerActivity extends AppCompatActivity {
         App.IO.execute(() -> {
             try {
                 Account.rate(vid, newRating);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> {
                     rating = "like".equals(newRating) ? "none" : "like";
                     updateLike();
@@ -498,7 +498,7 @@ public class PlayerActivity extends AppCompatActivity {
                     subscriptionId = nid;
                     updateSubscribe();
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show());
             }
         });

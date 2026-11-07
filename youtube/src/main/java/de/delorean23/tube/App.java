@@ -22,7 +22,12 @@ public class App extends Application {
     public static final String CH_DOWNLOAD = "downloads";
 
     private static App instance;
-    public static final ExecutorService IO = Executors.newFixedThreadPool(6);
+    /** Hintergrund-Threads mit großem Stack (die JavaScript-Auswertung von YouTube braucht viel). */
+    public static final ExecutorService IO = Executors.newFixedThreadPool(6, r -> {
+        Thread t = new Thread(null, r, "tube-io", 16L * 1024 * 1024);
+        t.setDaemon(true);
+        return t;
+    });
     public static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     private static final LruCache<String, StreamInfo> INFO_CACHE = new LruCache<>(30);
@@ -35,6 +40,7 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        CrashLog.install(this);
         NewPipe.init(NetDownloader.get(), new Localization("de", "DE"), new ContentCountry("DE"));
 
         if (Build.VERSION.SDK_INT >= 26) {

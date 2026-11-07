@@ -177,7 +177,7 @@ public class ListActivity extends AppCompatActivity {
                         break;
                 }
                 done(token, items);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 fail(token, e);
             }
         });
@@ -215,7 +215,7 @@ public class ListActivity extends AppCompatActivity {
                     adapter.add(more);
                     loadingMore = false;
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> loadingMore = false);
             }
         });
@@ -263,7 +263,7 @@ public class ListActivity extends AppCompatActivity {
                     subscriptionId = id;
                     updateSubscribe();
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show());
             }
         });

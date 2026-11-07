@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         updateAccountButton();
         askNotificationPermission();
         selectTab(TAB_HOME);
+        CrashLog.showIfAny(this);
     }
 
     @Override
@@ -272,7 +273,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             StreamingService yt = ServiceList.YouTube;
             searchQuery = yt.getSearchQHFactory().fromQuery(q, Collections.emptyList(), "");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             showEmpty("Suche nicht möglich: " + e.getMessage(), false);
             return;
         }
@@ -400,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
                             all.addAll(pls);
                             showList(all);
                         });
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         App.MAIN.post(() -> toast(e.getMessage()));
                     }
                 });
@@ -428,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
                 App.MAIN.post(() -> {
                     if (token == loadToken) showList(result);
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> {
                     if (token != loadToken) return;
                     adapter.set(null);
@@ -478,7 +479,7 @@ public class MainActivity extends AppCompatActivity {
                     adapter.add(more);
                     loadingMore = false;
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> loadingMore = false);
             }
         });

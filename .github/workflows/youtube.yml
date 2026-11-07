@@ -64,3 +64,43 @@ jobs:
           git add -f youtube-build-log.txt
           git commit -m "Build-Log ${{ github.run_number }}"
           git push -f origin build-logs
+
+  emulator-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: DeLoreanTube-32bit
+
+      - name: KVM aktivieren
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: App im Emulator testen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash .github/emu-test.sh
+
+      - name: Testprotokoll speichern (Zweig test-logs)
+        if: always()
+        run: |
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          mkdir -p /tmp/emu && cp -r emu-out/* /tmp/emu/ 2>/dev/null || echo "kein Ergebnis" > /tmp/emu/leer.txt
+          git checkout --orphan test-logs-tmp
+          git rm -rqf --cached . || true
+          rm -rf emu-out && mkdir emu-out && cp -r /tmp/emu/* emu-out/
+          git add -f emu-out
+          git commit -qm "Emulator-Test ${{ github.run_number }}"
+          git push -f origin HEAD:test-logs

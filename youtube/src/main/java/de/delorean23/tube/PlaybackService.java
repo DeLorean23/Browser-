@@ -148,7 +148,7 @@ public class PlaybackService extends MediaSessionService {
                     List<MediaItem> out = new ArrayList<>();
                     for (MediaItem mi : mediaItems) out.add(resolve(mi));
                     future.set(out);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     future.setException(e);
                 }
             });

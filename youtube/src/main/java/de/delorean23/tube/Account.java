@@ -94,7 +94,7 @@ public final class Account {
             AuthorizationResult r = Identity.getAuthorizationClient(a)
                     .getAuthorizationResultFromIntent(data);
             finishLogin(r, cb);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             cb.onResult(false, explain(e));
         }
     }
@@ -122,7 +122,7 @@ public final class Account {
                     prefs().edit().putString("name", "Google-Konto").apply();
                 }
                 App.MAIN.post(() -> cb.onResult(true, null));
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 App.MAIN.post(() -> cb.onResult(true, null));
             }
         });
@@ -182,7 +182,7 @@ public final class Account {
             return token;
         } catch (IOException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new IOException("Google-Konto nicht erreichbar: " + e.getMessage(), e);
         }
     }
