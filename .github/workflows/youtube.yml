@@ -27,14 +27,17 @@ jobs:
       - name: SDK-Lizenzen bestätigen
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
-      - name: APK bauen (32-bit, armeabi-v7a)
+      - name: APKs bauen (32-bit und 64-bit)
         run: |
           chmod +x gradlew
           set -o pipefail
           ./gradlew :youtube:assembleRelease --no-daemon --stacktrace 2>&1 | tee build-log.txt
 
-      - name: APK umbenennen
-        run: cp youtube/build/outputs/apk/release/youtube-release.apk DeLoreanTube-32bit.apk
+      - name: APKs umbenennen
+        run: |
+          ls youtube/build/outputs/apk/release/
+          cp youtube/build/outputs/apk/release/youtube-armeabi-v7a-release.apk DeLoreanTube-32bit.apk
+          cp youtube/build/outputs/apk/release/youtube-arm64-v8a-release.apk DeLoreanTube-64bit.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -46,8 +49,13 @@ jobs:
         with:
           tag_name: tube-build-${{ github.run_number }}
           name: DeLorean Tube Build ${{ github.run_number }}
-          body: 32-bit APK (armeabi-v7a) der YouTube-App mit Google-Login, Downloads (MP3/MP4), ohne Werbung und mit Hintergrund-Wiedergabe. Created by DeLorean23
-          files: DeLoreanTube-32bit.apk
+          body: |
+            DeLorean Tube – YouTube mit Google-Login, Downloads (MP3/MP4), ohne Werbung, Hintergrund-Wiedergabe, Mini-Player, Shorts und Chromecast.
+            DeLoreanTube-32bit.apk = ältere Geräte (armeabi-v7a), DeLoreanTube-64bit.apk = neuere Geräte (arm64-v8a).
+            Created by DeLorean23
+          files: |
+            DeLoreanTube-32bit.apk
+            DeLoreanTube-64bit.apk
           make_latest: false
 
       # Bei Fehlern das Build-Protokoll in den Zweig "build-logs" legen (zum Nachsehen)

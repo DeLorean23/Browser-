@@ -1,6 +1,6 @@
 # DeLorean Tube
 
-YouTube-App für Android (32-bit, armeabi-v7a, ab Android 5.0).
+YouTube-App für Android (ab Android 5.0), als zwei einzelne APKs: `DeLoreanTube-32bit.apk` (armeabi-v7a) und `DeLoreanTube-64bit.apk` (arm64-v8a).
 
 Created by DeLorean23
 
@@ -48,9 +48,9 @@ muss der neue SHA-1 in Schritt 5 eingetragen werden.
 ## APK bauen
 
 Bei jedem Push baut GitHub Actions (Workflow **YouTube-App bauen**) automatisch die APK und
-veröffentlicht sie unter **Releases** als `DeLoreanTube-32bit.apk`.
+veröffentlicht unter **Releases** die beiden einzelnen Dateien `DeLoreanTube-32bit.apk` und `DeLoreanTube-64bit.apk`.
 
-Android Studio: `gradlew :youtube:assembleRelease` → `youtube/build/outputs/apk/release/youtube-release.apk`
+Android Studio: `gradlew :youtube:assembleRelease` → `youtube/build/outputs/apk/release/youtube-armeabi-v7a-release.apk` und `youtube-arm64-v8a-release.apk`
 
 ## Grenzen
 
