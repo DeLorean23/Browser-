@@ -52,6 +52,7 @@ public class ListActivity extends AppCompatActivity {
 
     private String channelId;
     private String subscriptionId;
+    private MiniPlayer mini;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,8 +83,33 @@ public class ListActivity extends AppCompatActivity {
             if (Account.isLoggedIn() && channelId != null) checkSubscription();
         }
 
+        mini = new MiniPlayer(this, findViewById(R.id.contentFrame));
         refresh.setRefreshing(true);
         load();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mini.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        mini.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mini.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        mini.release();
+        super.onDestroy();
     }
 
     private void open(Item it) {

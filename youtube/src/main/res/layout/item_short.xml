@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <ImageView
+        android:id="@+id/sThumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter" />
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/sVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="fit"
+        app:shutter_background_color="@android:color/transparent"
+        app:use_artwork="false"
+        app:use_controller="false" />
+
+    <View
+        android:id="@+id/sTouch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@+id/sPaused"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center"
+        android:background="@drawable/circle_dark"
+        android:padding="16dp"
+        android:src="@drawable/ic_play"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/sLoading"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- rechts: Knöpfe -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="96dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/sLike"
+            style="@style/ShortButton"
+            android:drawableTop="@drawable/ic_like"
+            android:text="Mag ich" />
+
+        <TextView
+            android:id="@+id/sDownload"
+            style="@style/ShortButton"
+            android:drawableTop="@drawable/ic_download"
+            android:text="Download" />
+
+        <TextView
+            android:id="@+id/sShare"
+            style="@style/ShortButton"
+            android:drawableTop="@drawable/ic_share"
+            android:text="Teilen" />
+    </LinearLayout>
+
+    <!-- unten: Kanal und Titel -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bottom_shade"
+        android:orientation="vertical"
+        android:paddingLeft="14dp"
+        android:paddingTop="40dp"
+        android:paddingRight="80dp"
+        android:paddingBottom="20dp">
+
+        <TextView
+            android:id="@+id/sChannel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/sTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/sProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom"
+        android:max="1000"
+        android:progressTint="@color/accent" />
+</FrameLayout>

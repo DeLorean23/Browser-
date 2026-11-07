@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnAccount;
     private LinearLayout chips;
     private TextView[] tabs;
+    private MiniPlayer mini;
 
     private int tab = TAB_HOME;
     private int loadToken = 0;
@@ -133,6 +134,11 @@ public class MainActivity extends AppCompatActivity {
         btnAccount.setOnClickListener(v -> accountMenu());
         emptyButton.setOnClickListener(v -> login());
 
+        findViewById(R.id.tabShorts).setOnClickListener(v ->
+                startActivity(new Intent(this, ShortsActivity.class)));
+        mini = new MiniPlayer(this, findViewById(R.id.contentFrame));
+        Caster.setupButton(this, findViewById(R.id.castButton));
+
         setupKiosks();
         updateAccountButton();
         askNotificationPermission();
@@ -143,8 +149,27 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        mini.onResume();
         updateAccountButton();
         if (tab == TAB_LIB) load(false);
+    }
+
+    @Override
+    protected void onPause() {
+        mini.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mini.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        mini.release();
+        super.onDestroy();
     }
 
     @Override

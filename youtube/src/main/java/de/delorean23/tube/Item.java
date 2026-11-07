@@ -23,6 +23,8 @@ public final class Item {
     public long views = -1;
     public String date;
     public boolean live;
+    /** YouTube Short (hochkant) */
+    public boolean shorts;
     /** Für Videos aus dem RSS-Feed: zum Sortieren */
     public long published;
     /** Für eigene Playlists (YouTube-Konto) */
@@ -44,6 +46,7 @@ public final class Item {
             it.date = s.getTextualUploadDate();
             StreamType st = s.getStreamType();
             it.live = st == StreamType.LIVE_STREAM || st == StreamType.AUDIO_LIVE_STREAM;
+            it.shorts = s.isShortFormContent() || (it.url != null && it.url.contains("/shorts/"));
         } else if (ii instanceof ChannelInfoItem) {
             ChannelInfoItem c = (ChannelInfoItem) ii;
             it.type = CHANNEL;

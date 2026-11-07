@@ -121,6 +121,12 @@
                 android:text="Qualität" />
 
             <TextView
+                android:id="@+id/btnCast"
+                style="@style/ActionButton"
+                android:drawableLeft="@drawable/ic_tv"
+                android:text="Fernseher" />
+
+            <TextView
                 android:id="@+id/btnShare"
                 style="@style/ActionButton"
                 android:drawableLeft="@drawable/ic_share"

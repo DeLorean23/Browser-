@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Schwebender Mini-Player (wie bei YouTube): Video läuft klein weiter, X in der Ecke schließt -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/miniRoot"
+    android:layout_width="200dp"
+    android:layout_height="113dp"
+    android:layout_gravity="bottom|end"
+    android:layout_margin="12dp"
+    android:background="@drawable/mini_bg"
+    android:clipToOutline="true"
+    android:elevation="10dp"
+    android:visibility="gone">
+
+    <ImageView
+        android:id="@+id/miniThumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/miniVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="fit"
+        app:shutter_background_color="@android:color/transparent"
+        app:use_artwork="false"
+        app:use_controller="false" />
+
+    <View
+        android:id="@+id/miniTouch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageButton
+        android:id="@+id/miniPlay"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:background="@drawable/circle_dark"
+        android:contentDescription="Abspielen/Pause"
+        android:src="@drawable/ic_pause" />
+
+    <ImageButton
+        android:id="@+id/miniClose"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/circle_dark"
+        android:contentDescription="Schließen"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_close" />
+
+    <ProgressBar
+        android:id="@+id/miniProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom"
+        android:max="1000"
+        android:progressTint="@color/accent" />
+</FrameLayout>

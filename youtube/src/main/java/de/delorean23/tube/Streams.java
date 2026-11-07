@@ -110,6 +110,24 @@ public final class Streams {
         return fallback; // nur höhere vorhanden -> niedrigste davon
     }
 
+    /** Anzeige wie bei YouTube, z. B. "720p" oder "1080p60". */
+    public static String label(VideoStream v) {
+        if (v == null) return "";
+        String r = v.getResolution();
+        if (r == null || r.isEmpty()) r = height(v) + "p";
+        return r;
+    }
+
+    /** Fertige MP4 mit Bild und Ton (meist 360p) – kann der Chromecast direkt abspielen. */
+    public static VideoStream muxedMp4(StreamInfo info) {
+        VideoStream best = null;
+        for (VideoStream v : info.getVideoStreams()) {
+            if (!usable(v) || v.isVideoOnly() || v.getFormat() != MediaFormat.MPEG_4) continue;
+            if (best == null || height(v) > height(best)) best = v;
+        }
+        return best;
+    }
+
     public static boolean isLive(StreamInfo info) {
         switch (info.getStreamType()) {
             case LIVE_STREAM:

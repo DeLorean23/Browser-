@@ -25,6 +25,11 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+        <androidx.mediarouter.app.MediaRouteButton
+            android:id="@+id/castButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
+
         <ImageButton
             android:id="@+id/btnSearch"
             android:layout_width="48dp"
@@ -98,6 +103,7 @@
     </HorizontalScrollView>
 
     <FrameLayout
+        android:id="@+id/contentFrame"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -168,6 +174,12 @@
             style="@style/Tab"
             android:drawableTop="@drawable/ic_home"
             android:text="@string/tab_home" />
+
+        <TextView
+            android:id="@+id/tabShorts"
+            style="@style/Tab"
+            android:drawableTop="@drawable/ic_shorts"
+            android:text="Shorts" />
 
         <TextView
             android:id="@+id/tabSubs"

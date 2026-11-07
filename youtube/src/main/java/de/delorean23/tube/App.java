@@ -1,9 +1,11 @@
 package de.delorean23.tube;
 
+import android.app.Activity;
 import android.app.Application;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.LruCache;
@@ -32,6 +34,13 @@ public class App extends Application {
 
     private static final LruCache<String, StreamInfo> INFO_CACHE = new LruCache<>(30);
 
+    private static int started;
+
+    /** Wie viele Bildschirme der App gerade sichtbar sind (0 = App im Hintergrund / Display aus). */
+    public static int visibleScreens() {
+        return started;
+    }
+
     public static App get() {
         return instance;
     }
@@ -41,6 +50,15 @@ public class App extends Application {
         super.onCreate();
         instance = this;
         CrashLog.install(this);
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
+            @Override public void onActivityStarted(Activity a) { started++; }
+            @Override public void onActivityStopped(Activity a) { started = Math.max(0, started - 1); }
+            @Override public void onActivityCreated(Activity a, Bundle b) { }
+            @Override public void onActivityResumed(Activity a) { }
+            @Override public void onActivityPaused(Activity a) { }
+            @Override public void onActivitySaveInstanceState(Activity a, Bundle b) { }
+            @Override public void onActivityDestroyed(Activity a) { }
+        });
         NewPipe.init(NetDownloader.get(), new Localization("de", "DE"), new ContentCountry("DE"));
 
         if (Build.VERSION.SDK_INT >= 26) {

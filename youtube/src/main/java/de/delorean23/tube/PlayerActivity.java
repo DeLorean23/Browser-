@@ -1,6 +1,5 @@
 package de.delorean23.tube;
 
-import android.Manifest;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,7 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.net.Uri;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
@@ -17,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -26,7 +26,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
@@ -38,6 +37,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.cast.framework.CastSession;
+import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import org.schabi.newpipe.extractor.InfoItem;
@@ -48,9 +50,12 @@ import org.schabi.newpipe.extractor.stream.VideoStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
-/** Videoseite mit Player, Like, Abo, Download und Hintergrund-Wiedergabe. Created by DeLorean23 */
+/**
+ * Videoseite mit Player, Like, Abo, Download, Chromecast und Hintergrund-Wiedergabe.
+ * Video nach unten ziehen (oder Zurück) = Mini-Player.
+ * Created by DeLorean23
+ */
 public class PlayerActivity extends AppCompatActivity {
 
     public static Intent intent(Context c, String url, Item item) {
@@ -63,7 +68,8 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private PlayerView playerView;
-    private View playerBox, loading, header;
+    private DragFrame playerBox;
+    private View root, loading, header;
     private RecyclerView details;
     private ItemAdapter related;
     private TextView vTitle, vMeta, vDesc, chName, chSubs, btnSubscribe, btnLike, btnAudio;
@@ -80,7 +86,9 @@ public class PlayerActivity extends AppCompatActivity {
     private String subscriptionId;
     private String channelId;
     private boolean descExpanded;
-    private DownloadChoice pendingDownload;
+    private boolean minimizing;
+    private String castAskedFor;
+    private SessionManagerListener<CastSession> castListener;
 
     private SharedPreferences prefs;
 
@@ -88,9 +96,10 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
-        prefs = getSharedPreferences("player", MODE_PRIVATE);
-        audioOnly = prefs.getBoolean("audio_only", false);
+        prefs = Playback.prefs();
+        audioOnly = Playback.audioOnly();
 
+        root = findViewById(R.id.root);
         playerView = findViewById(R.id.playerView);
         playerBox = findViewById(R.id.playerBox);
         loading = findViewById(R.id.playerLoading);
@@ -121,9 +130,10 @@ public class PlayerActivity extends AppCompatActivity {
 
         btnLike.setOnClickListener(v -> toggleLike());
         btnSubscribe.setOnClickListener(v -> toggleSubscribe());
-        header.findViewById(R.id.btnDownload).setOnClickListener(v -> askDownload());
+        header.findViewById(R.id.btnDownload).setOnClickListener(v -> DownloadDialog.show(this, info, url));
         header.findViewById(R.id.btnQuality).setOnClickListener(v -> askQuality());
         header.findViewById(R.id.btnShare).setOnClickListener(v -> share());
+        header.findViewById(R.id.btnCast).setOnClickListener(v -> castNow());
         btnAudio.setOnClickListener(v -> toggleAudioOnly());
         header.findViewById(R.id.channelRow).setOnClickListener(v -> {
             if (info != null && info.getUploaderUrl() != null) {
@@ -137,14 +147,26 @@ public class PlayerActivity extends AppCompatActivity {
         });
         vDesc.setMovementMethod(LinkMovementMethod.getInstance());
 
-        playerView.setFullscreenButtonClickListener(full -> setRequestedOrientation(full
+        playerView.setFullscreenButtonClickListener(full -> setOrientation(full
                 ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                 : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
+        findViewById(R.id.btnMinimize).setOnClickListener(v -> minimize());
+        Caster.setupButton(this, findViewById(R.id.castButton));
+        setupDrag();
 
         updateAudioButton();
         applyOrientation(getResources().getConfiguration());
         handleIntent(getIntent());
         connect();
+    }
+
+    /** Android 8.0 erlaubt bei durchsichtigen Fenstern keine feste Ausrichtung. */
+    private void setOrientation(int o) {
+        if (Build.VERSION.SDK_INT == 26) return;
+        try {
+            setRequestedOrientation(o);
+        } catch (Throwable ignored) {
+        }
     }
 
     @Override
@@ -167,7 +189,7 @@ public class PlayerActivity extends AppCompatActivity {
                 return;
             }
         }
-        if (u == null) return; // aus der Benachrichtigung geöffnet: aktuelles Video zeigen
+        if (u == null) return; // aus Mini-Player/Benachrichtigung: aktuelles Video zeigen
         String id = Util.videoId(u);
         if (id != null) u = Util.watchUrl(id);
         i.removeExtra("url");
@@ -178,12 +200,6 @@ public class PlayerActivity extends AppCompatActivity {
         vMeta.setText("");
         chSubs.setText("");
         chAvatar.setImageDrawable(null);
-        String th = i.getStringExtra("thumb");
-        Item hist = new Item();
-        hist.url = u;
-        hist.title = t;
-        hist.uploader = i.getStringExtra("uploader");
-        hist.thumb = th;
         openVideo(u, null);
     }
 
@@ -201,9 +217,20 @@ public class PlayerActivity extends AppCompatActivity {
         vDesc.setMaxLines(3);
         related.set(null);
         details.scrollToPosition(0);
-        if (controller != null) startPlayback(u, 0);
-        else pendingUrl = u;
+        if (controller != null) {
+            if (!isCurrent(u)) startPlayback(u, 0);
+        } else {
+            pendingUrl = u;
+        }
         loadInfo(u);
+    }
+
+    /** Läuft genau dieses Video schon (z. B. aus dem Mini-Player wieder groß gemacht)? */
+    private boolean isCurrent(String u) {
+        if (controller == null) return false;
+        MediaItem cur = controller.getCurrentMediaItem();
+        String cu = TubeSources.urlOf(cur);
+        return cu != null && u != null && cu.equals(u) && controller.getPlaybackState() != Player.STATE_IDLE;
     }
 
     // ------------------------------------------------------------ Player
@@ -218,7 +245,7 @@ public class PlayerActivity extends AppCompatActivity {
                 Toast.makeText(this, "Player nicht verfügbar: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 return;
             }
-            playerView.setPlayer(controller);
+            if (!isFinishing() && hasWindowFocusOrResumed()) playerView.setPlayer(controller);
             controller.addListener(new Player.Listener() {
                 @Override
                 public void onPlayerError(@NonNull PlaybackException error) {
@@ -238,22 +265,30 @@ public class PlayerActivity extends AppCompatActivity {
                     else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 }
             });
-            setVideoTrackEnabled(true);
+            Playback.setVideo(controller, true);
             if (pendingUrl != null) {
                 String u = pendingUrl;
                 pendingUrl = null;
-                startPlayback(u, 0);
+                if (!isCurrent(u)) startPlayback(u, 0);
             } else if (url == null) {
-                // aus der Benachrichtigung: laufendes Video anzeigen
+                // aus Mini-Player/Benachrichtigung: laufendes Video anzeigen
                 MediaItem cur = controller.getCurrentMediaItem();
                 if (cur != null) {
-                    url = cur.mediaId.split("\n")[0];
+                    url = TubeSources.urlOf(cur);
+                    CharSequence t = controller.getMediaMetadata().title;
+                    vTitle.setText(t != null ? t : "Wird geladen …");
                     loadInfo(url);
                 } else {
                     finish();
                 }
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private boolean resumed;
+
+    private boolean hasWindowFocusOrResumed() {
+        return resumed;
     }
 
     private int wantedHeight() {
@@ -268,38 +303,54 @@ public class PlayerActivity extends AppCompatActivity {
         CharSequence t = vTitle.getText();
         if (t != null && t.length() > 0) md.setTitle(t);
         MediaItem item = new MediaItem.Builder()
-                .setMediaId(PlaybackService.mediaId(u, wantedHeight(), audioOnly))
+                .setMediaId(TubeSources.mediaId(u, wantedHeight(), audioOnly))
                 .setMediaMetadata(md.build())
                 .build();
         controller.setMediaItem(item, positionMs);
         controller.prepare();
-        controller.play();
-    }
-
-    private void setVideoTrackEnabled(boolean enabled) {
-        if (controller == null) return;
-        controller.setTrackSelectionParameters(controller.getTrackSelectionParameters().buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, !enabled || audioOnly)
-                .build());
+        if (Caster.connected(this)) {
+            // läuft schon auf dem Fernseher: nicht zusätzlich am Handy abspielen
+            controller.pause();
+        } else {
+            controller.play();
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (controller != null) {
-            playerView.setPlayer(controller);
-            setVideoTrackEnabled(true);
+        if (controller != null) Playback.setVideo(controller, true);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        resumed = true;
+        if (controller != null) playerView.setPlayer(controller);
+        CastContext cc = Caster.ctx(this);
+        if (cc != null) {
+            castListener = new CastListener();
+            cc.getSessionManager().addSessionManagerListener(castListener, CastSession.class);
         }
     }
 
     @Override
-    protected void onStop() {
-        // App im Hintergrund oder Bildschirm aus: Ton läuft weiter, Bild wird nicht mehr geladen
-        if (controller != null) {
-            setVideoTrackEnabled(false);
-            playerView.setPlayer(null);
+    protected void onPause() {
+        resumed = false;
+        // Bild an den Mini-Player abgeben
+        playerView.setPlayer(null);
+        CastContext cc = Caster.ctx(this);
+        if (cc != null && castListener != null) {
+            cc.getSessionManager().removeSessionManagerListener(castListener, CastSession.class);
         }
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
         super.onStop();
+        // App im Hintergrund oder Bildschirm aus: Ton läuft weiter, Bild wird nicht mehr geladen
+        if (controller != null && App.visibleScreens() == 0) Playback.setVideo(controller, false);
     }
 
     @Override
@@ -312,6 +363,10 @@ public class PlayerActivity extends AppCompatActivity {
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         applyOrientation(newConfig);
+    }
+
+    private boolean isLandscape() {
+        return getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
     }
 
     private void applyOrientation(Configuration c) {
@@ -334,17 +389,121 @@ public class PlayerActivity extends AppCompatActivity {
             getWindow().getDecorView().setSystemUiVisibility(0);
         }
         playerBox.setLayoutParams(lp);
+        playerBox.setDragEnabled(!land);
     }
 
     @Override
     public void onBackPressed() {
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        if (isLandscape()) {
+            setOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
             playerView.postDelayed(() ->
-                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED), 1500);
+                    setOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED), 1500);
             return;
         }
-        super.onBackPressed();
+        minimize();
+    }
+
+    // ------------------------------------------------------------ Verkleinern (Mini-Player)
+
+    private void setupDrag() {
+        playerBox.setListener(new DragFrame.Listener() {
+            @Override
+            public void onDrag(float dy) {
+                applyDrag(dy);
+            }
+
+            @Override
+            public void onRelease(float dy, float velocityY) {
+                float h = root.getHeight();
+                if (dy > h * 0.2f || velocityY > 1500) {
+                    minimize();
+                } else {
+                    root.animate().translationY(0).setDuration(180).start();
+                    playerBox.animate().scaleX(1).scaleY(1).translationX(0).setDuration(180).start();
+                    details.animate().alpha(1).setDuration(180).start();
+                    setBackgroundAlpha(255);
+                }
+            }
+        });
+    }
+
+    private void applyDrag(float dy) {
+        float h = Math.max(1, root.getHeight());
+        float p = Math.min(1f, dy / (h * 0.6f));
+        root.setTranslationY(dy);
+        playerBox.setPivotX(playerBox.getWidth());
+        playerBox.setPivotY(0);
+        float s = 1f - 0.5f * p;
+        playerBox.setScaleX(s);
+        playerBox.setScaleY(s);
+        details.setAlpha(Math.max(0f, 1f - p * 2f));
+        setBackgroundAlpha((int) (255 * (1f - p)));
+    }
+
+    private void setBackgroundAlpha(int a) {
+        Drawable bg = root.getBackground();
+        if (bg != null) bg.mutate().setAlpha(Math.max(0, Math.min(255, a)));
+    }
+
+    /** Video schrumpft nach unten rechts, die Seite darunter wird sichtbar, Ton/Bild laufen weiter. */
+    private void minimize() {
+        if (minimizing) return;
+        minimizing = true;
+        if (isTaskRoot()) {
+            // per Link geöffnet: Startseite darunter öffnen, damit der Mini-Player dort weiterläuft
+            startActivity(new Intent(this, MainActivity.class));
+        }
+        float density = getResources().getDisplayMetrics().density;
+        float miniW = 200 * density, miniH = 113 * density, margin = 12 * density, bottomBar = 56 * density;
+        float boxW = Math.max(1, playerBox.getWidth());
+        float s = miniW / boxW;
+        float targetTop = root.getHeight() - bottomBar - margin - miniH;
+        playerBox.setPivotX(playerBox.getWidth());
+        playerBox.setPivotY(0);
+        DecelerateInterpolator di = new DecelerateInterpolator();
+        details.animate().alpha(0).setDuration(150).start();
+        setBackgroundAlpha(0);
+        playerBox.animate().scaleX(s).scaleY(s).translationX(-margin).setInterpolator(di).setDuration(220).start();
+        root.animate().translationY(targetTop).setInterpolator(di).setDuration(220)
+                .withEndAction(() -> {
+                    finish();
+                    overridePendingTransition(0, R.anim.fade_out);
+                }).start();
+    }
+
+    // ------------------------------------------------------------ Chromecast
+
+    private void castNow() {
+        long pos = controller != null ? controller.getCurrentPosition() : 0;
+        Caster.cast(this, info, url, pos, () -> {
+            castAskedFor = url;
+            if (controller != null) controller.pause();
+        });
+    }
+
+    /** Neues Video, während der Fernseher verbunden ist: einmal fragen. */
+    private void maybeAskCast() {
+        if (info != null && url != null && !url.equals(castAskedFor) && Caster.connected(this)) {
+            castAskedFor = url;
+            castNow();
+        }
+    }
+
+    private final class CastListener implements SessionManagerListener<CastSession> {
+        @Override public void onSessionStarted(@NonNull CastSession s, @NonNull String id) {
+            castAskedFor = null;
+            maybeAskCast();
+        }
+        @Override public void onSessionResumed(@NonNull CastSession s, boolean wasSuspended) { }
+        @Override public void onSessionStarting(@NonNull CastSession s) { }
+        @Override public void onSessionStartFailed(@NonNull CastSession s, int error) {
+            Toast.makeText(PlayerActivity.this, "Verbindung zum Fernseher fehlgeschlagen", Toast.LENGTH_LONG).show();
+        }
+        @Override public void onSessionEnding(@NonNull CastSession s) { }
+        @Override public void onSessionEnded(@NonNull CastSession s, int error) { castAskedFor = null; }
+        @Override public void onSessionResuming(@NonNull CastSession s, @NonNull String id) { }
+        @Override public void onSessionResumeFailed(@NonNull CastSession s, int error) { }
+        @Override public void onSessionSuspended(@NonNull CastSession s, int reason) { }
     }
 
     // ------------------------------------------------------------ Infos
@@ -420,6 +579,7 @@ public class PlayerActivity extends AppCompatActivity {
         updateLike();
         updateSubscribe();
         if (Account.isLoggedIn()) loadAccountState(url);
+        maybeAskCast();
     }
 
     // ------------------------------------------------------------ Konto-Aktionen
@@ -533,7 +693,7 @@ public class PlayerActivity extends AppCompatActivity {
         if (controller == null || url == null) return;
         long pos = controller.getCurrentPosition();
         startPlayback(url, pos);
-        setVideoTrackEnabled(true);
+        Playback.setVideo(controller, true);
     }
 
     private void askQuality() {
@@ -548,12 +708,12 @@ public class PlayerActivity extends AppCompatActivity {
         }
         final List<Integer> heights = new ArrayList<>(choices.keySet());
         String[] labels = new String[heights.size()];
-        int current = PlaybackService.currentHeight();
+        int current = TubeSources.currentHeight();
         int checked = -1;
         for (int i = 0; i < heights.size(); i++) {
             int h = heights.get(i);
             VideoStream v = choices.get(h);
-            labels[i] = h + "p" + (v != null && v.getFps() > 30 ? v.getFps() : "");
+            labels[i] = Streams.label(v);
             if (h == current) checked = i;
         }
         final boolean wifi = Util.isOnWifi(this);
@@ -571,95 +731,5 @@ public class PlayerActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Abbrechen", null)
                 .show();
-    }
-
-    // ------------------------------------------------------------ Download
-
-    private static final class DownloadChoice {
-        final boolean mp3;
-        final int height;
-
-        DownloadChoice(boolean mp3, int height) {
-            this.mp3 = mp3;
-            this.height = height;
-        }
-    }
-
-    private void askDownload() {
-        if (info == null) {
-            Toast.makeText(this, "Video wird noch geladen …", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (Streams.isLive(info)) {
-            Toast.makeText(this, "Live-Streams können nicht heruntergeladen werden", Toast.LENGTH_LONG).show();
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Download")
-                .setItems(new String[]{"Audio (MP3)", "Video (MP4)"}, (d, which) -> {
-                    if (which == 0) startDownload(new DownloadChoice(true, 0));
-                    else askResolution();
-                })
-                .setNegativeButton("Abbrechen", null)
-                .show();
-    }
-
-    private void askResolution() {
-        LinkedHashMap<Integer, VideoStream> choices = Streams.videoChoices(info, true);
-        if (choices.isEmpty()) {
-            Toast.makeText(this, "Für dieses Video gibt es keine MP4-Datei", Toast.LENGTH_LONG).show();
-            return;
-        }
-        final List<Integer> heights = new ArrayList<>(choices.keySet());
-        String[] labels = new String[heights.size()];
-        long dur = info.getDuration();
-        for (int i = 0; i < heights.size(); i++) {
-            int h = heights.get(i);
-            VideoStream v = choices.get(h);
-            String size = "";
-            if (v != null && v.getBitrate() > 0 && dur > 0) {
-                long bytes = (long) v.getBitrate() / 8 * dur + 128_000L / 8 * dur;
-                size = "  (ca. " + (bytes / (1024 * 1024)) + " MB)";
-            }
-            labels[i] = h + "p" + (v != null && v.getFps() > 30 ? v.getFps() : "") + size;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Welche Auflösung?")
-                .setItems(labels, (d, which) -> startDownload(new DownloadChoice(false, heights.get(which))))
-                .setNegativeButton("Abbrechen", null)
-                .show();
-    }
-
-    private void startDownload(DownloadChoice c) {
-        if (Build.VERSION.SDK_INT < 29 && ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            pendingDownload = c;
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 7);
-            return;
-        }
-        Intent i = new Intent(this, DownloadService.class)
-                .putExtra("url", url)
-                .putExtra("title", info.getName())
-                .putExtra("artist", info.getUploaderName())
-                .putExtra("mp3", c.mp3)
-                .putExtra("height", c.height);
-        ContextCompat.startForegroundService(this, i);
-        Toast.makeText(this, c.mp3 ? "MP3-Download gestartet" : "Video-Download gestartet ("
-                + c.height + "p)", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 7) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                    && pendingDownload != null) {
-                startDownload(pendingDownload);
-            } else {
-                Toast.makeText(this, "Ohne Speicher-Berechtigung kein Download", Toast.LENGTH_LONG).show();
-            }
-            pendingDownload = null;
-        }
     }
 }

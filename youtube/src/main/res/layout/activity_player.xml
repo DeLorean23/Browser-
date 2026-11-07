@@ -7,7 +7,7 @@
     android:background="@color/bg"
     android:orientation="vertical">
 
-    <FrameLayout
+    <de.delorean23.tube.DragFrame
         android:id="@+id/playerBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,7 +27,22 @@
             android:layout_height="40dp"
             android:layout_gravity="center"
             android:visibility="gone" />
-    </FrameLayout>
+
+        <ImageButton
+            android:id="@+id/btnMinimize"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="top|start"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Verkleinern"
+            android:src="@drawable/ic_expand_down" />
+
+        <androidx.mediarouter.app.MediaRouteButton
+            android:id="@+id/castButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="top|end" />
+    </de.delorean23.tube.DragFrame>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/details"
