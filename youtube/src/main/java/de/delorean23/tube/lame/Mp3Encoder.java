@@ -81,11 +81,35 @@ public final class Mp3Encoder {
         gfp.findReplayGain = false;
 
         id3.id3tag_init(gfp);
-        if (title != null && !title.isEmpty()) id3.id3tag_set_title(gfp, title);
-        if (artist != null && !artist.isEmpty()) id3.id3tag_set_artist(gfp, artist);
+        // Titel/Interpret selbst als ID3v2 (UTF-16) schreiben: volle Länge, Umlaute richtig
+        writeId3v2(out, title, artist);
 
         int rc = lame.lame_init_params(gfp);
         if (rc < 0) throw new IOException("LAME init fehlgeschlagen (" + rc + ")");
+    }
+
+    private static void writeId3v2(OutputStream out, String title, String artist) throws IOException {
+        java.io.ByteArrayOutputStream frames = new java.io.ByteArrayOutputStream();
+        textFrame(frames, "TIT2", title);
+        textFrame(frames, "TPE1", artist);
+        textFrame(frames, "TENC", "DeLorean Tube");
+        byte[] body = frames.toByteArray();
+        int size = body.length;
+        out.write(new byte[]{'I', 'D', '3', 3, 0, 0,
+                (byte) ((size >> 21) & 0x7f), (byte) ((size >> 14) & 0x7f),
+                (byte) ((size >> 7) & 0x7f), (byte) (size & 0x7f)});
+        out.write(body);
+    }
+
+    private static void textFrame(java.io.ByteArrayOutputStream f, String id, String text) throws IOException {
+        if (text == null || text.isEmpty()) return;
+        byte[] t = text.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
+        int len = 1 + 2 + t.length;
+        f.write(id.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+        f.write(new byte[]{(byte) (len >> 24), (byte) (len >> 16), (byte) (len >> 8), (byte) len, 0, 0});
+        f.write(1);                       // Kodierung: UTF-16 mit BOM
+        f.write(new byte[]{(byte) 0xFF, (byte) 0xFE});
+        f.write(t);
     }
 
     /** pcm: 16-bit little endian, interleaved; length in bytes. */
@@ -103,8 +127,9 @@ public final class Mp3Encoder {
                 r = (short) ((pcm[pos] & 0xff) | (pcm[pos + 1] << 8));
                 pos += 2;
             }
-            left[i] = l << 16;
-            right[i] = r << 16;
+            // diese Java-Version von LAME erwartet normale 16-bit-Werte (+/- 32768), nicht hochskaliert
+            left[i] = l;
+            right[i] = r;
         }
         int need = (int) (1.25 * frames) + 7200;
         if (mp3buf.length < need) mp3buf = new byte[need];
