@@ -31,8 +31,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
-import org.schabi.newpipe.extractor.Page;
-import org.schabi.newpipe.extractor.linkhandler.SearchQueryHandler;
 import org.schabi.newpipe.extractor.stream.StreamInfo;
 
 import java.util.ArrayList;
@@ -66,8 +64,7 @@ public class ShortsActivity extends AppCompatActivity {
 
     private final LinkedHashMap<String, String> sources = new LinkedHashMap<>();
     private String source;
-    private SearchQueryHandler query;
-    private Page next;
+    private ShortsSource.Cursor cursor;
     private boolean loadingMore;
     private int loadToken;
 
@@ -236,37 +233,31 @@ public class ShortsActivity extends AppCompatActivity {
         player.clearMediaItems();
         current = -1;
         currentHolder = null;
-        next = null;
-        query = null;
+        cursor = null;
+        loadingMore = false;
         adapter.set(new ArrayList<>());
         emptyBox.setVisibility(View.GONE);
         progress.setVisibility(View.VISIBLE);
         final String topic = searchText != null ? searchText : key;
         App.IO.execute(() -> {
             try {
-                List<Item> items;
-                SearchQueryHandler q = null;
-                Page n = null;
-                if (key.equals(SRC_SUBS)) {
-                    items = ShortsSource.fromSubscriptions(false);
-                } else {
-                    q = ShortsSource.query(topic);
-                    ShortsSource.SearchResult r = ShortsSource.search(q);
-                    items = r.items;
-                    n = r.next;
+                ShortsSource.Cursor c = key.equals(SRC_SUBS)
+                        ? ShortsSource.subscriptions() : ShortsSource.topic(topic);
+                List<Item> items = ShortsSource.next(c);
+                // erste Kanäle ohne Shorts? noch ein Stück weiter suchen
+                for (int tries = 0; items.isEmpty() && c.hasMore() && tries < 3; tries++) {
+                    items = ShortsSource.next(c);
                 }
-                final SearchQueryHandler fq = q;
-                final Page fn = n;
+                final List<Item> fi = items;
                 App.MAIN.post(() -> {
                     if (token != loadToken) return;
                     progress.setVisibility(View.GONE);
-                    query = fq;
-                    next = fn;
-                    adapter.set(items);
-                    if (items.isEmpty()) {
+                    cursor = c;
+                    adapter.set(fi);
+                    if (fi.isEmpty()) {
                         emptyBox.setVisibility(View.VISIBLE);
                         emptyText.setText(key.equals(SRC_SUBS)
-                                ? "In deinen Abos gibt es gerade keine neuen Shorts."
+                                ? "In deinen Abos gibt es gerade keine Shorts."
                                 : "Keine Shorts gefunden.");
                     } else {
                         pager.scrollToPosition(0);
@@ -285,21 +276,18 @@ public class ShortsActivity extends AppCompatActivity {
     }
 
     private void loadMore() {
-        if (loadingMore || next == null || query == null) return;
+        if (loadingMore || cursor == null || !cursor.hasMore()) return;
         loadingMore = true;
         final int token = loadToken;
-        final SearchQueryHandler q = query;
-        final Page page = next;
+        final ShortsSource.Cursor c = cursor;
         App.IO.execute(() -> {
             try {
-                ShortsSource.SearchResult r = ShortsSource.more(q, page);
+                List<Item> more = ShortsSource.next(c);
                 App.MAIN.post(() -> {
                     loadingMore = false;
                     if (token != loadToken) return;
-                    next = r.next;
-                    adapter.add(r.items);
-                    // nur Kurzvideos gefunden? weiterblättern
-                    if (r.items.isEmpty() && next != null) loadMore();
+                    adapter.add(more);
+                    if (more.isEmpty() && c.hasMore()) loadMore();
                 });
             } catch (Throwable e) {
                 App.MAIN.post(() -> loadingMore = false);
