@@ -128,7 +128,7 @@ public final class Account {
         });
     }
 
-    private static String explain(Exception e) {
+    private static String explain(Throwable e) {
         String m = String.valueOf(e.getMessage());
         if (m.contains("10:") || m.contains("DEVELOPER_ERROR")) {
             return "Google-Login ist noch nicht eingerichtet (Client-ID in der Google Cloud Console fehlt "

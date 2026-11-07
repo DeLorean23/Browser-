@@ -108,7 +108,7 @@ public class ListActivity extends AppCompatActivity {
         });
     }
 
-    private void fail(int token, Exception e) {
+    private void fail(int token, Throwable e) {
         App.MAIN.post(() -> {
             if (token != loadToken) return;
             refresh.setRefreshing(false);
