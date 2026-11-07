@@ -313,12 +313,13 @@ public class MainActivity extends AppCompatActivity {
     // ------------------------------------------------------------ Kategorien
 
     private void setupKiosks() {
-        kiosks.put("Trending", "Trends");
         kiosks.put("trending_music", "Musik");
         kiosks.put("trending_gaming", "Gaming");
         kiosks.put("live", "Live");
         kiosks.put("trending_podcasts_episodes", "Podcasts");
         kiosks.put("trending_movies_and_shows", "Filme & Serien");
+        // YouTube hat die alte Trends-Seite abgeschafft; bleibt als letzte Auswahl, falls sie wiederkommt
+        kiosks.put("Trending", "Trends");
         try {
             java.util.Set<String> available = ServiceList.YouTube.getKioskList().getAvailableKiosks();
             kiosks.keySet().retainAll(available);

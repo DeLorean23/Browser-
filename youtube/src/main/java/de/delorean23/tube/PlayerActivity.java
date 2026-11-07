@@ -96,6 +96,8 @@ public class PlayerActivity extends AppCompatActivity {
         loading = findViewById(R.id.playerLoading);
         details = findViewById(R.id.details);
 
+        // LayoutManager zuerst setzen, sonst stürzt das Aufbauen des Kopfteils ab
+        details.setLayoutManager(new LinearLayoutManager(this));
         header = LayoutInflater.from(this).inflate(R.layout.player_header, details, false);
         vTitle = header.findViewById(R.id.vTitle);
         vMeta = header.findViewById(R.id.vMeta);
@@ -115,7 +117,6 @@ public class PlayerActivity extends AppCompatActivity {
         });
         related.setCompact(true);
         related.setHeader(header);
-        details.setLayoutManager(new LinearLayoutManager(this));
         details.setAdapter(related);
 
         btnLike.setOnClickListener(v -> toggleLike());
