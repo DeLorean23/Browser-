@@ -173,10 +173,11 @@ public class PlayerActivity extends AppCompatActivity {
         i.removeExtra("url");
 
         String t = i.getStringExtra("title");
-        if (t != null) {
-            vTitle.setText(t);
-            chName.setText(i.getStringExtra("uploader"));
-        }
+        vTitle.setText(t != null ? t : "Wird geladen …");
+        chName.setText(t != null ? i.getStringExtra("uploader") : "");
+        vMeta.setText("");
+        chSubs.setText("");
+        chAvatar.setImageDrawable(null);
         String th = i.getStringExtra("thumb");
         Item hist = new Item();
         hist.url = u;
